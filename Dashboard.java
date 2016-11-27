@@ -395,7 +395,9 @@ public class Dashboard extends JComponent {
     }
 
     public void setValue(String value) {
-        this.value = value;
+        if(value == null)
+            this.value = "0";
+        else    this.value = value;
     }
 
     public static void main(String[] args) {
@@ -415,10 +417,26 @@ public class Dashboard extends JComponent {
             p.add(dashboard);
             f.setSize(640, 480);
             f.setVisible(true);
+
             //模拟数据变化
-            Thread.sleep(3000);
-            dashboard.setValue("40");
-            dashboard.repaint();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for(int i = 0; i < 10; i++){
+                        try {
+                            Thread.sleep(300);
+                            dashboard.setValue(""+ i *5);
+                            dashboard.repaint();
+                        }catch (InterruptedException e){
+                        }
+                    }
+
+
+                }
+            }).start();
+
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
