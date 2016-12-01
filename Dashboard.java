@@ -1,5 +1,3 @@
-import com.oracle.tools.packager.Log;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.GeneralPath;
@@ -11,17 +9,15 @@ import java.awt.geom.Rectangle2D;
  */
 public class Dashboard extends JComponent {
 
-    //字体大小
     private static final int VALUE_FONT_SIZE = 18;
 
-    //直线，扇形，圆形等类型
     public static final String LINE = "line";
-    public static final String RING = "ring";
+    public static final String ARC = "arc";
     public static final String CIRCLE = "circle";
     public static final String  SEMI_CIRCLE = "semi_circle";
 
     public static final double CIRCLE_ANGLE = 360;
-    public static final int RING_ANGLE_INDEX = 4;
+    public static final int ARC_ANGLE_INDEX = 3;
     public static final int SEMI_ANGLE_INDEX = 11;
     public static final double CIRCLE_ANGLE_START = Math.PI / 2;
 
@@ -33,15 +29,22 @@ public class Dashboard extends JComponent {
     //最大刻度，最小刻度
     private double major = 1;
     private double minor = 0.1;
+
     //当前指针指向的位置
     private String value = "";
+
     //单位
     private String unit = "";
 
     private double width;
     private double height;
+
     private Graphics2D g2;
     private int fontSize;
+
+    private Color majorScaleColor;
+    private Color minorScaleColor;
+    private Color pointerColor;
 
     public Dashboard() {
         super();
@@ -50,21 +53,14 @@ public class Dashboard extends JComponent {
     }
 
     public void paintComponent(Graphics g) {
-        //获取控件当前大小
         width = this.getWidth();
         height = this.getHeight();
-        fontSize = 14;
-        //画布颜色等相关配置
         g2 = graphicsConfig(g);
 
-        if (major <= 0) {
-            major = to - from;
-        }
-        //类型判断，根据类型设置，进行相应绘制操作
-        if (type.startsWith(RING) || type.equals(CIRCLE)) {
+        if (type.startsWith(ARC) || type.equals(CIRCLE)) {
                 drawArcAndCircle();
                 drawArcAndCircleText();
-        } else if(type.equals(LINE)){
+        } else if (type.equals(LINE)) {
                 drawLine();
                 drawLineText();
         } else {
@@ -75,6 +71,7 @@ public class Dashboard extends JComponent {
 
 
     private Graphics2D graphicsConfig(Graphics g) {
+        fontSize = 14;
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(this.getBackground());
@@ -86,62 +83,89 @@ public class Dashboard extends JComponent {
     }
 
     private void drawArcAndCircle() {
-        //整体角度和起始弧度
-        double angle = type.equals(CIRCLE) ? CIRCLE_ANGLE : toDouble(type.substring(RING_ANGLE_INDEX));
-        double angleStart = type.equals(CIRCLE) ? CIRCLE_ANGLE_START : (180 + (angle - 180) / 2) / 180 * Math.PI;
-        //根据控件的大小来确定指针的长度
-        double r = angle <= 180 ? Math.min(width / 2, height) : Math.min(width / 2, height / 2);
-        double voff = angle <= 180 ? 0 : r;
-        //确定每一个刻度所表示的弧度
-        double dunit = (angle / 180 * Math.PI) / (to - from);
-        //绘制出刻度盘
-        drawArcScale(angleStart, dunit, r, voff);
-        //绘制当前指针的指向
-       drawArcValue(angleStart, dunit, r, voff, angle);
+        double angle = type.equals(CIRCLE) ? CIRCLE_ANGLE : getArcAngle();
+        double startAngle = type.equals(CIRCLE) ? CIRCLE_ANGLE_START : getArcStartAngle(angle);
+        double r = getRadius(angle);
+        double yOffset = angle <= 180 ? 0 : r;
+        double dunit = getDunit(angle);
+
+        drawArcScale(startAngle, dunit, r, yOffset);
+        drawArcValue(startAngle, dunit, r, yOffset, angle);
     }
 
-    private void drawArcScale(double angleStart, double dunit,  double r, double voff) {
-        for (int i = 0; i <= 2*(to - from) / major; i++) {
-            g2.draw(new Line2D.Double(Math.cos(angleStart - i * major * dunit) * r + width / 2, height - voff - Math.sin(angleStart - i * major * dunit) * r,
-                    Math.cos(angleStart - i * major * dunit) * r * 0.75 + width / 2, height - voff - Math.sin(angleStart - i * major * dunit) * r * 0.75));
-            if (minor > 0 && i < (to - from) / major) {
-                for (int j = 1; j < major / minor; j++) {
-                    if (i * major + j * minor < to - from) {
-                        g2.draw(new Line2D.Double(Math.cos(angleStart - (i * major + j * minor) * dunit) * r + width / 2, height - voff - Math.sin(angleStart - (i * major + j * minor) * dunit) * r,
-                                Math.cos(angleStart - (i * major + j * minor) * dunit) * r * 0.875 + width / 2, height - voff - Math.sin(angleStart - (i * major + j * minor) * dunit) * r * 0.875));
-                    }
+    private double getDunit(double angle) {
+        if((to - from) != 0)
+            return (angle / 180 * Math.PI) / (to - from);
+        return 1;
+    }
+
+    private double getRadius(double angle){
+            return angle <= 180 ? Math.min(width / 2, height) : Math.min(width / 2, height / 2);
+    }
+
+    private double getArcAngle() {
+        return toDouble(type.substring(ARC_ANGLE_INDEX));
+    }
+
+    private double getArcStartAngle(double angle) {
+        return (180 + (angle - 180) / 2) / 180 * Math.PI;
+    }
+
+    private void drawArcScale(double startAngle, double dunit,  double r, double yOffset) {
+        for(int i = 0; i <= (to - from) / major; i++) {
+            g2.draw(getArcMajorLine(startAngle, dunit, r, yOffset, i));
+            if(minor > 0 && i < (to - from) / major) {
+                for (int j = 0; j < major/minor; j++) {
+                    g2.draw(getArcMinorLine(startAngle, dunit, r, yOffset, i, j));
                 }
             }
         }
     }
 
-    private void drawArcValue(double angleStart, double dunit, double r, double voff, double angle) {
+    private Line2D getArcMajorLine(double startAngle, double dunit, double r, double yOffset, int num) {
+        double x1 = Math.cos(startAngle - num * major * dunit) * r + width / 2;
+        double y1 = height - yOffset - Math.sin(startAngle - num * major * dunit) * r;
+        double x2 = Math.cos(startAngle - num * major * dunit) * r * 0.75 + width / 2;
+        double y2 = height - yOffset - Math.sin(startAngle - num * major * dunit) * r * 0.75;
+        return new Line2D.Double(x1, y1, x2, y2);
+    }
+
+    private Line2D getArcMinorLine(double startAngle, double dunit, double r, double yOffset, int num1, int num2) {
+        double x1 = Math.cos(startAngle - (num1 * major + num2 * minor) * dunit) * r + width / 2;
+        double y1 = height - yOffset - Math.sin(startAngle - (num1 * major + num2 * minor) * dunit) * r;
+        double x2 = Math.cos(startAngle - (num1 * major + num2 * minor) * dunit) * r * 0.875 + width / 2;
+        double y2 = height - yOffset - Math.sin(startAngle - (num1 * major + num2 * minor) * dunit) * r * 0.875;
+        return new Line2D.Double(x1, y1, x2, y2);
+
+    }
+
+    private void drawArcValue(double startAngle, double dunit, double r, double yOffset, double angle) {
         if (value.length() > 0) {
             double val = toDouble(value);
             GeneralPath p = new GeneralPath();
-            p.moveTo(Math.cos(angleStart - (val - from) * dunit) * r * 0.875 + width / 2, height - voff - Math.sin(angleStart - (val - from) * dunit) * r * 0.875);
-            p.lineTo(Math.cos(angleStart - (val - from) * dunit + Math.PI * 0.5) * 2 + width / 2, height - voff - Math.sin(angleStart - (val - from) * dunit + Math.PI * 0.5) * 2);
-            p.lineTo(Math.cos(angleStart - (val - from) * dunit - Math.PI * 0.5) * 2 + width / 2, height - voff - Math.sin(angleStart - (val - from) * dunit - Math.PI * 0.5) * 2);
+            p.moveTo(Math.cos(startAngle - (val - from) * dunit) * r * 0.875 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit) * r * 0.875);
+            p.lineTo(Math.cos(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2);
+            p.lineTo(Math.cos(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2);
             p.closePath();
             g2.fill(p);
             g2.setFont(new Font("", Font.BOLD, VALUE_FONT_SIZE));
-            voff = angle <= 180 ? 10 : r - fontSize / 2;
-            drawValue(g2, value + unit, (int) (width / 2 - getStrBounds(g2, value).getWidth() / 2), (int) (height - voff));
+            yOffset = angle <= 180 ? 10 : r - fontSize / 2;
+            drawValue(g2, value + unit, (int) (width / 2 - getStrBounds(g2, value).getWidth() / 2), (int) (height - yOffset));
         }
     }
 
     private void drawArcAndCircleText() {
         double angle;
-        double angleStart;
+        double startAngle;
         if (type.equals(CIRCLE)) {
             angle = 360;
-            angleStart = Math.PI / 2;
+            startAngle = Math.PI / 2;
         } else {
-            angle = toDouble(type.substring(4));
-            angleStart = (180 + (angle - 180) / 2) / 180 * Math.PI;
+            angle = toDouble(type.substring(3));
+            startAngle = (180 + (angle - 180) / 2) / 180 * Math.PI;
         }
         double r = angle <= 180 ? Math.min(width / 2, height) : Math.min(width / 2, height / 2);
-        double voff = angle <= 180 ? 0 : r;
+        double yOffset = angle <= 180 ? 0 : r;
         double dunit = (angle / 180 * Math.PI) / (to - from);
         int xoff = 0;
         int yoff = 0;
@@ -149,7 +173,7 @@ public class Dashboard extends JComponent {
         for (int i = type.equals(CIRCLE) ? 1 : 0; i <= (to - from) / major; i++) {
             String str;
             str = format(from + i * major);
-            strAngle = (angleStart - i * major * dunit + Math.PI * 2) % (Math.PI * 2);
+            strAngle = (startAngle - i * major * dunit + Math.PI * 2) % (Math.PI * 2);
             xoff = 0;
             yoff = 0;
             if (strAngle >= 0 && strAngle < Math.PI * 0.25) {
@@ -181,7 +205,7 @@ public class Dashboard extends JComponent {
             } else if (strAngle >= Math.PI * 1.5 && strAngle < Math.PI * 2) {
                 xoff = (int) -getStrBounds(g2, str).getWidth();
             }
-            g2.drawString(str, (int) (Math.cos(strAngle) * r * 0.75 + width / 2) + xoff, (int) (height - voff - Math.sin(strAngle) * r * 0.75) + yoff);
+            g2.drawString(str, (int) (Math.cos(strAngle) * r * 0.75 + width / 2) + xoff, (int) (height - yOffset - Math.sin(strAngle) * r * 0.75) + yoff);
         }
 
     }
@@ -235,7 +259,6 @@ public class Dashboard extends JComponent {
     }
 
     private void drawHorizontalLineValue(double dunit) {
-        //绘制指针,通过GeneralPath绘制，先将点移动到顶部，然后画出两条线
         if (value.length() > 0) {
             double val = toDouble(value);
             GeneralPath p = new GeneralPath();
@@ -315,29 +338,29 @@ public class Dashboard extends JComponent {
     private void drawSemiCircle() {
         //整体角度和起始弧度
         double angle = toDouble(type.substring(SEMI_ANGLE_INDEX));
-        double angleStart = (180 + (angle - 180) / 2) / 180 * Math.PI;
+        double startAngle = (180 + (angle - 180) / 2) / 180 * Math.PI;
         //根据控件的大小来确定指针的长度
         double r = angle <= 180 ? Math.min(width / 2, height) : Math.min(width / 2, height / 2);
-        double voff = angle <= 180 ? 0 : r;
+        double yOffset = angle <= 180 ? 0 : r;
         //确定每一个刻度所表示的弧度
         double dunit = (angle / 180 * Math.PI) / (2*(to - from));
         //绘制出刻度盘
-        drawSemiCircleScale(angleStart, dunit, r, voff);
+        drawSemiCircleScale(startAngle, dunit, r, yOffset);
         //绘制当前指针的指向
-        drawSemiCircleValue(angleStart, dunit, r, voff, angle);
+        drawSemiCircleValue(startAngle, dunit, r, yOffset, angle);
     }
 
-    private void drawSemiCircleScale(double angleStart, double dunit,  double r, double voff){
+    private void drawSemiCircleScale(double startAngle, double dunit,  double r, double yOffset){
         for(int k = 0; k < 2; k++) {
-            angleStart = k == 0 ? angleStart : angleStart - Math.PI/2;
+            startAngle = k == 0 ? startAngle : startAngle - Math.PI/2;
             for (int i = 0; i <= (to - from) / major; i++) {
-                g2.draw(new Line2D.Double(Math.cos(angleStart - i * major * dunit) * r + width / 2, height - voff - Math.sin(angleStart - i * major * dunit) * r,
-                        Math.cos(angleStart - i * major * dunit) * r * 0.75 + width / 2, height - voff - Math.sin(angleStart - i * major * dunit) * r * 0.75));
+                g2.draw(new Line2D.Double(Math.cos(startAngle - i * major * dunit) * r + width / 2, height - yOffset - Math.sin(startAngle - i * major * dunit) * r,
+                        Math.cos(startAngle - i * major * dunit) * r * 0.75 + width / 2, height - yOffset - Math.sin(startAngle - i * major * dunit) * r * 0.75));
                 if (minor > 0 && i < (to - from) / major) {
                     for (int j = 1; j < major / minor; j++) {
                         if (i * major + j * minor < to - from) {
-                            g2.draw(new Line2D.Double(Math.cos(angleStart - (i * major + j * minor) * dunit) * r + width / 2, height - voff - Math.sin(angleStart - (i * major + j * minor) * dunit) * r,
-                                    Math.cos(angleStart - (i * major + j * minor) * dunit) * r * 0.875 + width / 2, height - voff - Math.sin(angleStart - (i * major + j * minor) * dunit) * r * 0.875));
+                            g2.draw(new Line2D.Double(Math.cos(startAngle - (i * major + j * minor) * dunit) * r + width / 2, height - yOffset - Math.sin(startAngle - (i * major + j * minor) * dunit) * r,
+                                    Math.cos(startAngle - (i * major + j * minor) * dunit) * r * 0.875 + width / 2, height - yOffset - Math.sin(startAngle - (i * major + j * minor) * dunit) * r * 0.875));
                         }
                     }
                 }
@@ -346,7 +369,7 @@ public class Dashboard extends JComponent {
 
     }
 
-    private void drawSemiCircleValue(double angleStart, double dunit,  double r, double voff, double angle) {
+    private void drawSemiCircleValue(double startAngle, double dunit,  double r, double yOffset, double angle) {
         if (value.length() > 0) {
             double val = 0;
             if(value.startsWith("left")) {
@@ -357,22 +380,22 @@ public class Dashboard extends JComponent {
                 val = to + val;
             }
             GeneralPath p = new GeneralPath();
-            p.moveTo(Math.cos(angleStart - (val - from) * dunit) * r * 0.875 + width / 2, height - voff - Math.sin(angleStart - (val - from) * dunit) * r * 0.875);
-            p.lineTo(Math.cos(angleStart - (val - from) * dunit + Math.PI * 0.5) * 2 + width / 2, height - voff - Math.sin(angleStart - (val - from) * dunit + Math.PI * 0.5) * 2);
-            p.lineTo(Math.cos(angleStart - (val - from) * dunit - Math.PI * 0.5) * 2 + width / 2, height - voff - Math.sin(angleStart - (val - from) * dunit - Math.PI * 0.5) * 2);
+            p.moveTo(Math.cos(startAngle - (val - from) * dunit) * r * 0.875 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit) * r * 0.875);
+            p.lineTo(Math.cos(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2);
+            p.lineTo(Math.cos(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2);
             p.closePath();
             g2.fill(p);
             g2.setFont(new Font("", Font.BOLD, VALUE_FONT_SIZE));
-            voff = angle <= 180 ? 10 : r - fontSize / 2;
-            drawValue(g2, value + unit, (int) (width / 2 - getStrBounds(g2, value).getWidth() / 2), (int) (height - voff));
+            yOffset = angle <= 180 ? 10 : r - fontSize / 2;
+            drawValue(g2, value + unit, (int) (width / 2 - getStrBounds(g2, value).getWidth() / 2), (int) (height - yOffset));
         }
     }
 
     private void drawSemiCircleText() {
         double angle = toDouble(type.substring(SEMI_ANGLE_INDEX)) ;
-        double angleStart = CIRCLE_ANGLE_START;
+        double startAngle = CIRCLE_ANGLE_START;
         double r = angle <= 180 ? Math.min(width / 2, height) : Math.min(width / 2, height / 2);
-        double voff = angle <= 180 ? 0 : r;
+        double yOffset = angle <= 180 ? 0 : r;
         double dunit = (angle / 180 * Math.PI) / (2*(to - from));
         int xoff = 0;
         int yoff = 0;
@@ -381,7 +404,7 @@ public class Dashboard extends JComponent {
         for(int j = 0; j < 2; j++) {
             for(int i = 0; i <= (to - from)/major; i++) {
                 String str = format(from + i * major);
-                double baseAngle = (angleStart - i * major * dunit + Math.PI * 2 )% (Math.PI * 2);
+                double baseAngle = (startAngle - i * major * dunit + Math.PI * 2 )% (Math.PI * 2);
                 strAngle = j== 0 ? baseAngle : Math.PI- baseAngle;
                 xoff = 0;
                 yoff = 0;
@@ -414,7 +437,7 @@ public class Dashboard extends JComponent {
                 } else if (strAngle >= Math.PI * 1.5 && strAngle < Math.PI * 2) {
                     xoff = (int) -getStrBounds(g2, str).getWidth();
                 }
-                g2.drawString(str, (int) (Math.cos(strAngle) * r * 0.75 + width / 2) + xoff, (int) (height - voff - Math.sin(strAngle) * r * 0.75) + yoff);
+                g2.drawString(str, (int) (Math.cos(strAngle) * r * 0.75 + width / 2) + xoff, (int) (height - yOffset - Math.sin(strAngle) * r * 0.75) + yoff);
 
             }
         }
@@ -516,6 +539,18 @@ public class Dashboard extends JComponent {
         else    this.value = value;
     }
 
+    public void setMajorScaleColor(Color majorScaleColor) {
+        this.majorScaleColor = majorScaleColor;
+    }
+
+    public void setMinorScaleColor(Color minorScaleColor) {
+        this.minorScaleColor = minorScaleColor;
+    }
+
+    public void setPointerColor(Color pointerColor) {
+        this.pointerColor = pointerColor;
+    }
+
     public static void main(String[] args) {
         //如何调用半圆刻度盘
 //        JFrame f = new JFrame("速度展示");
@@ -538,7 +573,7 @@ public class Dashboard extends JComponent {
             JFrame f = new JFrame("速度展示");
             Container p = f.getContentPane();
             Dashboard dashboard = new Dashboard();
-            dashboard.setType("ring240");
+            dashboard.setType("arc240");
             dashboard.setForeground(Color.BLUE);
             dashboard.setBackground(Color.WHITE);
             dashboard.setUnit("M/S");
