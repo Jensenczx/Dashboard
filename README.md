@@ -21,8 +21,8 @@
 
 ```
 	Dashboard dashboard = new Dashboard();
-	//设置类型，ring+角度
-    dashboard.setType("ring240");
+	//设置类型，arc+角度
+    dashboard.setType("arc240");
     //设置前景颜色，表盘颜色
     dashboard.setForeground(Color.BLUE);
     //设置表盘背景色
@@ -38,5 +38,20 @@
     dashboard.setMajor(5);
     //设置最小的刻度
     dashboard.setMinor(1);
+     //刻度盘上文字颜色
+    dashboard.setTextColor(Color.black);
+    //刻度盘上当前数值的颜色
+    dashboard.setValueColor(Color.GREEN);
+     //刻度盘上指针的颜色
+     dashboard.setPointerColor(Color.BLUE);
+     //刻度盘上长刻度的颜色
+     dashboard.setMajorScaleColor(Color.BLACK);
+     //刻度盘上短刻度的颜色
+     dashboard.setMinorScaleColor(Color.DARK_GRAY);
 ```
  
+### Update
+ 
+ - 解决了控件较小问题
+ - 添加了颜色自定义
+ - 对内部代码进行了部分更新

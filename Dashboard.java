@@ -7,6 +7,11 @@ import java.awt.geom.Rectangle2D;
 /**
  * Created by chenjensen on 16/11/26.
  */
+
+/**
+ * Dashboard 是继承自JComonent实现的一个仪表盘</br>
+ *当前支持线性刻度盘，弧形刻度盘，圆形刻度盘，半圆型刻度盘
+ */
 public class Dashboard extends JComponent {
 
     private static final int VALUE_FONT_SIZE = 18;
@@ -45,16 +50,17 @@ public class Dashboard extends JComponent {
     private Color majorScaleColor;
     private Color minorScaleColor;
     private Color pointerColor;
+    private Color textColor;
+    private Color valueColor;
 
     public Dashboard() {
         super();
-        this.setPreferredSize(new Dimension(60, 60));
         this.setBackground(Color.WHITE);
     }
 
     public void paintComponent(Graphics g) {
-        width = this.getWidth();
-        height = this.getHeight();
+        width = getWidth();
+        height = getHeight();
         g2 = graphicsConfig(g);
 
         if (type.startsWith(ARC) || type.equals(CIRCLE)) {
@@ -68,7 +74,6 @@ public class Dashboard extends JComponent {
             drawSemiCircleText();
         }
     }
-
 
     private Graphics2D graphicsConfig(Graphics g) {
         fontSize = 14;
@@ -113,9 +118,13 @@ public class Dashboard extends JComponent {
 
     private void drawArcScale(double startAngle, double dunit,  double r, double yOffset) {
         for(int i = 0; i <= (to - from) / major; i++) {
+            if(majorScaleColor != null)
+                g2.setColor(majorScaleColor);
             g2.draw(getArcMajorLine(startAngle, dunit, r, yOffset, i));
             if(minor > 0 && i < (to - from) / major) {
-                for (int j = 0; j < major/minor; j++) {
+                for (int j = 1; j < major/minor; j++) {
+                    if(minorScaleColor != null)
+                        g2.setColor(minorScaleColor);
                     g2.draw(getArcMinorLine(startAngle, dunit, r, yOffset, i, j));
                 }
             }
@@ -147,6 +156,8 @@ public class Dashboard extends JComponent {
             p.lineTo(Math.cos(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2);
             p.lineTo(Math.cos(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2);
             p.closePath();
+            if(pointerColor != null)
+                g2.setColor(pointerColor);
             g2.fill(p);
             g2.setFont(new Font("", Font.BOLD, VALUE_FONT_SIZE));
             yOffset = angle <= 180 ? 10 : r - fontSize / 2;
@@ -157,6 +168,8 @@ public class Dashboard extends JComponent {
     private void drawArcAndCircleText() {
         double angle;
         double startAngle;
+        if(textColor != null)
+            g2.setColor(textColor);
         if (type.equals(CIRCLE)) {
             angle = 360;
             startAngle = Math.PI / 2;
@@ -226,9 +239,13 @@ public class Dashboard extends JComponent {
 
     private void drawVerticalLineScale(double max, double dunit) {
         for (int i = 0; i <= (to - from) / major; i++) {
+            if(majorScaleColor != null)
+                g2.setColor(majorScaleColor);
             g2.draw(new Line2D.Double(0, height - i * major * dunit, width - max, height - i * major * dunit));
             if (i < (to - from) / major && minor > 0) {
                 for (int j = 1; j < major / minor; j++) {
+                    if(minorScaleColor != null)
+                        g2.setColor(minorScaleColor);
                     g2.draw(new Line2D.Double(0, height - (i * major + j * minor) * dunit, (width - max) / 2, height - (i * major + j * minor) * dunit));
                 }
             }
@@ -237,9 +254,13 @@ public class Dashboard extends JComponent {
 
     private void drawHorizontalLineScale(double dunit) {
         for (int i = 0; i <= (to - from) / major; i++) {
+            if(majorScaleColor != null)
+                g2.setColor(majorScaleColor);
             g2.draw(new Line2D.Double(i * major * dunit, 0, i * major * dunit, height - fontSize));
             if (i < (to - from) / major && minor > 0) {
                 for (int j = 1; j < major / minor; j++) {
+                    if(minorScaleColor != null)
+                        g2.setColor(minorScaleColor);
                     g2.draw(new Line2D.Double((i * major + j * minor) * dunit, 0, (i * major + j * minor) * dunit, (height - fontSize) / 2));
                 }
             }
@@ -254,6 +275,8 @@ public class Dashboard extends JComponent {
             p.lineTo(width - max, height - (val - from) * dunit - 4);
             p.lineTo(width - max, height - (val - from) * dunit + 4);
             p.closePath();
+            if(valueColor != null)
+                g2.setColor(valueColor);
             g2.fill(p);
         }
     }
@@ -266,11 +289,15 @@ public class Dashboard extends JComponent {
             p.lineTo((val - from) * dunit - 4, height - fontSize);
             p.lineTo((val - from) * dunit + 4, height - fontSize);
             p.closePath();
+            if(valueColor != null)
+                g2.setColor(valueColor);
             g2.fill(p);
         }
     }
 
     private void drawLineText() {
+        if(textColor != null)
+            g2.setColor(textColor);
         if (width > height) {
             double dunit = width / (to - from);
             int off = 0;
@@ -345,6 +372,7 @@ public class Dashboard extends JComponent {
         //确定每一个刻度所表示的弧度
         double dunit = (angle / 180 * Math.PI) / (2*(to - from));
         //绘制出刻度盘
+
         drawSemiCircleScale(startAngle, dunit, r, yOffset);
         //绘制当前指针的指向
         drawSemiCircleValue(startAngle, dunit, r, yOffset, angle);
@@ -353,20 +381,8 @@ public class Dashboard extends JComponent {
     private void drawSemiCircleScale(double startAngle, double dunit,  double r, double yOffset){
         for(int k = 0; k < 2; k++) {
             startAngle = k == 0 ? startAngle : startAngle - Math.PI/2;
-            for (int i = 0; i <= (to - from) / major; i++) {
-                g2.draw(new Line2D.Double(Math.cos(startAngle - i * major * dunit) * r + width / 2, height - yOffset - Math.sin(startAngle - i * major * dunit) * r,
-                        Math.cos(startAngle - i * major * dunit) * r * 0.75 + width / 2, height - yOffset - Math.sin(startAngle - i * major * dunit) * r * 0.75));
-                if (minor > 0 && i < (to - from) / major) {
-                    for (int j = 1; j < major / minor; j++) {
-                        if (i * major + j * minor < to - from) {
-                            g2.draw(new Line2D.Double(Math.cos(startAngle - (i * major + j * minor) * dunit) * r + width / 2, height - yOffset - Math.sin(startAngle - (i * major + j * minor) * dunit) * r,
-                                    Math.cos(startAngle - (i * major + j * minor) * dunit) * r * 0.875 + width / 2, height - yOffset - Math.sin(startAngle - (i * major + j * minor) * dunit) * r * 0.875));
-                        }
-                    }
-                }
-            }
+            drawArcScale(startAngle, dunit, r, yOffset);
         }
-
     }
 
     private void drawSemiCircleValue(double startAngle, double dunit,  double r, double yOffset, double angle) {
@@ -384,6 +400,8 @@ public class Dashboard extends JComponent {
             p.lineTo(Math.cos(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit + Math.PI * 0.5) * 2);
             p.lineTo(Math.cos(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2 + width / 2, height - yOffset - Math.sin(startAngle - (val - from) * dunit - Math.PI * 0.5) * 2);
             p.closePath();
+            if(pointerColor != null)
+                g2.setColor(pointerColor);
             g2.fill(p);
             g2.setFont(new Font("", Font.BOLD, VALUE_FONT_SIZE));
             yOffset = angle <= 180 ? 10 : r - fontSize / 2;
@@ -437,18 +455,18 @@ public class Dashboard extends JComponent {
                 } else if (strAngle >= Math.PI * 1.5 && strAngle < Math.PI * 2) {
                     xoff = (int) -getStrBounds(g2, str).getWidth();
                 }
+                if(textColor != null)
+                    g2.setColor(textColor);
                 g2.drawString(str, (int) (Math.cos(strAngle) * r * 0.75 + width / 2) + xoff, (int) (height - yOffset - Math.sin(strAngle) * r * 0.75) + yoff);
 
             }
         }
     }
 
-    public void updateValue(String value) {
-        invalidate();
-    }
-
     private void drawValue(Graphics2D g2, String value, int x, int y) {
         g2.setFont(new Font(Font.SERIF, Font.BOLD, VALUE_FONT_SIZE));
+        if(valueColor != null)
+            g2.setColor(valueColor);
         g2.drawString(value, x, y);
     }
 
@@ -551,62 +569,12 @@ public class Dashboard extends JComponent {
         this.pointerColor = pointerColor;
     }
 
-    public static void main(String[] args) {
-        //如何调用半圆刻度盘
-//        JFrame f = new JFrame("速度展示");
-//        Container p = f.getContentPane();
-//        Dashboard dashboard = new Dashboard();
-//        dashboard.setType("semi_circle180");
-//        dashboard.setForeground(Color.BLUE);
-//        dashboard.setBackground(Color.WHITE);
-//        dashboard.setUnit("M/S");
-//        dashboard.setValue("left10");
-//        dashboard.setFrom(0);
-//        dashboard.setTo(50);
-//        dashboard.setMajor(5);
-//        dashboard.setMinor(1);
-//        p.add(dashboard);
-//        f.setSize(640, 480);
-//        f.setVisible(true);
-
-        try {
-            JFrame f = new JFrame("速度展示");
-            Container p = f.getContentPane();
-            Dashboard dashboard = new Dashboard();
-            dashboard.setType("arc240");
-            dashboard.setForeground(Color.BLUE);
-            dashboard.setBackground(Color.WHITE);
-            dashboard.setUnit("M/S");
-            dashboard.setValue("20");
-            dashboard.setFrom(0);
-            dashboard.setTo(50);
-            dashboard.setMajor(5);
-            dashboard.setMinor(1);
-            p.add(dashboard);
-            f.setSize(640, 480);
-            f.setVisible(true);
-
-            //模拟数据变化
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    for(int i = 0; i < 10; i++){
-                        try {
-                            Thread.sleep(300);
-                            dashboard.setValue(""+ i *5);
-                            dashboard.repaint();
-                        }catch (InterruptedException e){
-                        }
-                    }
-
-
-                }
-            }).start();
-
-
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void setTextColor(Color textColor) {
+        this.textColor = textColor;
     }
+
+    public void setValueColor(Color valueColor) {
+        this.valueColor = valueColor;
+    }
+
 }
