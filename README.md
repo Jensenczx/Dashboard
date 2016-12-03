@@ -55,3 +55,7 @@
  - 解决了控件较小问题
  - 添加了颜色自定义
  - 对内部代码进行了部分更新
+ 
+ 
+### Implement note
+- [基于Java Swing的仪表盘实现](https://segmentfault.com/a/1190000007683729)
