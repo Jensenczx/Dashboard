@@ -49,12 +49,35 @@
      //刻度盘上短刻度的颜色
      dashboard.setMinorScaleColor(Color.DARK_GRAY);
 ```
+
+v1.1
+
+```
+Dashboard dashboard = new Dashboard.Builder()
+                .from(0)
+                .to(50)
+                .major(5)
+                .minor(1)
+                .value("10")
+                .unit("M/S")
+                .type("arc180")
+                .textColor(Color.black)
+                .valueColor(Color.black)
+                .pointerColor(Color.black)
+                .majorScaleColor(Color.BLACK)
+                .minorScaleColor(Color.DARK_GRAY)
+                .foregroundColor(Color.BLUE)
+                .backgroundColor(Color.WHITE)
+                .size(new Dimension(400, 100))
+                .build();
+```
  
 ### Update
  
  - 解决了控件较小问题
  - 添加了颜色自定义
  - 对内部代码进行了部分更新
+ - v1.1中通过生成器模式对其进行了重构
  
  
 ### Implement note
